@@ -5,8 +5,16 @@ use std::path::Path;
 use std::{env, fs, io};
 use walkdir::WalkDir;
 
-const USAGE_TEXT: &[u8] = b"Usage:\n    df2 <path>...\n";
-const OPTIONS_TEXT: &[u8] = b"\nOptions:\n    -h --help\n    -o --output=OUTPUT\n    -q --quiet";
+const USAGE_TEXT: &[u8] = b"Usage:
+    df2 <path>... [--quiet --output=OUTPUT --like=LIKE --size]\n";
+const OPTIONS_TEXT: &[u8] = b"\nOptions:
+    -q --quiet
+    -o --output=OUTPUT
+    -h --help
+    -l --like=LIKE
+    -s --size\n";
+// NOTE: Investigate the "--like". Is it to target a file? Target a file type?
+// TODO: Add a "--ignore" option.
 
 struct Args {
     none: bool,
