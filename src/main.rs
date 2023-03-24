@@ -77,6 +77,8 @@ fn handle<W: Write>(writer: &mut W, args: Args) {
     if args.help {
         return write_output(writer, vec![USAGE_TEXT, OPTIONS_TEXT], false);
     }
+    // let hash_map_files: HashMap<String, Vec<String>> = HashMap::new();
+    // hash_map_files = duplicate_finder(paths, quiet, like);
     let mut dirs: Vec<String> = Vec::new();
     for arg in args.paths {
         let path = Path::new(&arg);
@@ -171,6 +173,37 @@ fn list_files_in_directory(dir: &str) -> Vec<String> {
         }
     }
     files
+}
+
+fn duplicate_finder(paths: Vec<String>, quiet: bool, like: bool) -> HashMap<String, Vec<String>> {
+    let mut result: HashMap<String, Vec<String>> = HashMap::new();
+    for path in paths {
+        let file_name = fs::read_to_string(path).unwrap();
+        let file_name = file_name.trim();
+        let file_name = file_name.to_lowercase();
+        let file_name = file_name.as_str();
+
+        write_output(
+            &mut io::stdout(),
+            vec![b"Checking file: {0}\n", file_name.as_bytes()],
+            quiet,
+        );
+
+        if like {
+            if let Some(hash_map) = result.get_mut(file_name) {
+                // hash_map.push(path.to_string());
+            } else {
+                // result.insert(file_name.to_string(), vec![path.to_string()]);
+            }
+        } else {
+            if let Some(hash_map) = result.get_mut(file_name) {
+                // hash_map.push(path.to_string());
+            } else {
+                // result.insert(file_name.to_string(), vec![path.to_string()]);
+            }
+        }
+    }
+    return result;
 }
 
 #[cfg(test)]
