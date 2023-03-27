@@ -65,9 +65,12 @@ fn parse_args(args: &[String]) -> Args {
 fn main() {
     let stdout = io::stdout();
     let mut writer = stdout.lock();
+    #[cfg(target_os = "linux")]
     let args: Vec<String> = env::args().collect();
-    let parsed_args: Args = parse_args(&args[1..]);
-    handle(&mut writer, parsed_args);
+    #[cfg(target_os = "windows")]
+    // NOTE: https://stackoverflow.com/questions/75848743/how-to-handle-paths-with-spaces-when-passing-arguments-to-a-rust-cli-program-on
+    let args: Vec<String> = env::args().map(|arg| arg.replace("\"", "\\")).collect();
+    handle(&mut writer, args);
 }
 
 fn handle<W: Write>(writer: &mut W, args: Args) {
