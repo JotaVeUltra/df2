@@ -522,4 +522,19 @@ mod tests {
         // Teardown
         fs::remove_dir_all(dir).unwrap();
     }
+
+    #[test]
+    #[ignore]
+    fn test_dot_files_are_ignored() {
+        let dir: &str = "test directory/test subdirectory 2";
+        let files: Vec<String> = list_files_in_directory(dir);
+        #[cfg(target_os = "windows")]
+        {
+            let windows_files: Vec<String> = vec![
+                "test directory/test subdirectory 2\\content 1 - copy 4.txt".to_string(),
+                "test directory/test subdirectory 2\\content 1 - copy 5.txt".to_string(),
+            ];
+            assert_eq!(windows_files, files);
+        }
+    }
 }
