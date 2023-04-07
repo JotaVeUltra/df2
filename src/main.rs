@@ -1,4 +1,5 @@
 use std::io::Write;
+use std::path::Path;
 use std::{env, io};
 
 const USAGE_TEXT: &[u8] = b"Usage:\n    df2 <path>...\n";
@@ -17,6 +18,15 @@ fn handle<W: Write>(writer: &mut W, args: Vec<String>) {
     }
     if args.contains(&String::from("-h")) || args.contains(&String::from("--help")) {
         return write_output(writer, vec![USAGE_TEXT, OPTIONS_TEXT]);
+    }
+    for arg in args.iter().skip(1) {
+        let path = Path::new(arg);
+        if !path.exists() {
+            return write_output(
+                writer,
+                vec![b"Error: Directory ", arg.as_bytes(), b" does not exist.\n"],
+            );
+        }
     }
 }
 
@@ -61,5 +71,19 @@ mod tests {
             from_utf8(&[USAGE_TEXT, OPTIONS_TEXT].concat()).unwrap(),
             out
         );
+    }
+
+    #[test]
+    fn handle_writes_error_message_if_directory_does_not_exist() {
+        // Setup
+        let mut buf = Vec::new();
+        let args: Vec<String> = vec![String::from("bin"), String::from("nonexistent_dir")];
+
+        // Test
+        handle(&mut buf, args);
+        let out = from_utf8(&buf).unwrap();
+
+        // Assertions
+        assert!(out.contains("Error: Directory nonexistent_dir does not exist.\n"));
     }
 }
