@@ -49,6 +49,7 @@ fn handle<W: Write>(writer: &mut W, args: Vec<String>) {
     for dir in dirs.iter() {
         write_output(writer, vec![b"- ", dir.as_bytes(), b"\n"]);
     }
+    write_output(writer, vec![b"\nNo duplicate files found\n"]);
 }
 
 fn write_output<W: Write>(writer: &mut W, texts: Vec<&[u8]>) {
@@ -152,5 +153,23 @@ mod tests {
 
         // Teardown
         fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn handle_writes_no_duplicates_message_if_no_duplicates_found() {
+        // Setup
+        fs::create_dir_all("empty_dir").unwrap();
+        let mut buf = Vec::new();
+        let args: Vec<String> = vec![String::from("bin"), String::from("empty_dir")];
+
+        // Test
+        handle(&mut buf, args);
+        let out = from_utf8(&buf).unwrap();
+
+        // Assertions
+        assert!(out.contains("No duplicate files found"));
+
+        // Teardown
+        fs::remove_dir_all("empty_dir").unwrap();
     }
 }
