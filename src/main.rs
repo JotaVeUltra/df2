@@ -1,6 +1,7 @@
 use std::io::Write;
 use std::path::Path;
 use std::{env, io};
+use walkdir::WalkDir;
 
 const USAGE_TEXT: &[u8] = b"Usage:\n    df2 <path>...\n";
 const OPTIONS_TEXT: &[u8] = b"\nOptions:\n    -h --help\n";
@@ -19,6 +20,7 @@ fn handle<W: Write>(writer: &mut W, args: Vec<String>) {
     if args.contains(&String::from("-h")) || args.contains(&String::from("--help")) {
         return write_output(writer, vec![USAGE_TEXT, OPTIONS_TEXT]);
     }
+    let mut dirs: Vec<String> = Vec::new();
     for arg in args.iter().skip(1) {
         let path = Path::new(arg);
         if !path.exists() {
@@ -32,6 +34,20 @@ fn handle<W: Write>(writer: &mut W, args: Vec<String>) {
                 vec![b"Error: ", arg.as_bytes(), b" is not a directory.\n"],
             );
         }
+        for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
+            if entry.path().is_dir() {
+                if let Some(v) = entry.path().to_str() {
+                    dirs.push(v.to_string().replace('\\', "/"))
+                }
+            }
+        }
+    }
+    write_output(
+        writer,
+        vec![b"Computing duplicates in the following directories:\n"],
+    );
+    for dir in dirs.iter() {
+        write_output(writer, vec![b"- ", dir.as_bytes(), b"\n"]);
     }
 }
 
@@ -113,5 +129,28 @@ mod tests {
 
         // Teardown
         fs::remove_file(file_path).unwrap();
+    }
+
+    #[test]
+    fn handle_writes_directories_computed() {
+        // Setup
+        let dir = "test_dir";
+        let sub = format!("{}/test_subdir", dir);
+        fs::create_dir_all(&sub).unwrap();
+        let mut buf = Vec::new();
+        let args: Vec<String> = vec![String::from("bin"), dir.to_string()];
+
+        // Test
+        handle(&mut buf, args);
+        let out = from_utf8(&buf).unwrap();
+
+        // Assertions
+        assert!(out.contains(&format!(
+            "Computing duplicates in the following directories:\n- {}\n- {}",
+            dir, sub
+        )));
+
+        // Teardown
+        fs::remove_dir_all(dir).unwrap();
     }
 }
