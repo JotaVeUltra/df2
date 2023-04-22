@@ -1,6 +1,7 @@
+use md5::{Digest, Md5};
 use std::io::Write;
 use std::path::Path;
-use std::{env, io};
+use std::{env, fs, io};
 use walkdir::WalkDir;
 
 const USAGE_TEXT: &[u8] = b"Usage:\n    df2 <path>...\n";
@@ -58,14 +59,22 @@ fn write_output<W: Write>(writer: &mut W, texts: Vec<&[u8]>) {
     }
 }
 
+fn md5_hash(file_name: &str) -> String {
+    let file_bytes = fs::read(file_name).expect("Failed to read file");
+    let mut hasher = Md5::new();
+    hasher.update(&file_bytes);
+    let result = hasher.finalize();
+    format!("{:x}", result)
+}
+
 #[cfg(test)]
 mod tests {
-    use std::{
-        fs::{self, File},
-        str::from_utf8,
-    };
+    use std::{fs::File, str::from_utf8};
 
     use super::*;
+
+    const CONTENT1: &str = "content #1\n";
+    const CONTENT1_HASH: &str = "2afc33c9215e78de8066e5ea00fdd60c";
 
     #[test]
     fn handle_writes_usage_text_if_no_arguments_passed() {
@@ -171,5 +180,21 @@ mod tests {
 
         // Teardown
         fs::remove_dir_all("empty_dir").unwrap();
+    }
+
+    #[test]
+    fn md5_hash_calculates_correct_hash_for_file() {
+        // Setup
+        let file_name = "test_file.txt";
+        fs::write(file_name, CONTENT1).unwrap();
+
+        // Test
+        let actual_hash = md5_hash(file_name);
+
+        // Assertions
+        assert_eq!(CONTENT1_HASH, actual_hash);
+
+        // Teardown
+        fs::remove_file(file_name).unwrap();
     }
 }
