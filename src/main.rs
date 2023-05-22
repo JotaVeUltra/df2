@@ -1,4 +1,5 @@
 use md5::{Digest, Md5};
+use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;
 use std::{env, fs, io};
@@ -67,6 +68,17 @@ fn md5_hash(file_name: &str) -> String {
     format!("{:x}", result)
 }
 
+fn group_files_by_md5_hash(files: Vec<String>, files_by_hash: &mut HashMap<String, Vec<String>>) {
+    for file in files {
+        let file_hash = md5_hash(&file);
+        if let Some(hashes) = files_by_hash.get_mut(&file_hash) {
+            hashes.push(file);
+        } else {
+            files_by_hash.insert(file_hash, vec![file]);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::{fs::File, str::from_utf8};
@@ -74,7 +86,9 @@ mod tests {
     use super::*;
 
     const CONTENT1: &str = "content #1\n";
+    const CONTENT2: &str = "content #2\n";
     const CONTENT1_HASH: &str = "2afc33c9215e78de8066e5ea00fdd60c";
+    const CONTENT2_HASH: &str = "b7bbfec474771efecb3e519d09c80fcc";
 
     #[test]
     fn handle_writes_usage_text_if_no_arguments_passed() {
@@ -196,5 +210,41 @@ mod tests {
 
         // Teardown
         fs::remove_file(file_name).unwrap();
+    }
+
+    #[test]
+    fn group_files_by_md5_hash_creates_correct_groups() {
+        // Setup
+        let dir = "test_dir";
+        fs::create_dir_all(dir).unwrap();
+        let file1 = format!("{}/file1.txt", dir);
+        let file2 = format!("{}/file2.txt", dir);
+        let file3 = format!("{}/file3.txt", dir);
+        let file4 = format!("{}/file4.txt", dir);
+        fs::write(&file1, CONTENT1).unwrap();
+        fs::write(&file2, CONTENT1).unwrap();
+        fs::write(&file3, CONTENT2).unwrap();
+        fs::write(&file4, CONTENT1).unwrap();
+
+        // Test
+        let mut files_by_hash = HashMap::new();
+        group_files_by_md5_hash(
+            vec![file1.clone(), file2.clone(), file3.clone(), file4.clone()],
+            &mut files_by_hash,
+        );
+
+        // Assertions
+        assert_eq!(files_by_hash.len(), 2);
+        let group1 = files_by_hash.get(CONTENT1_HASH).unwrap();
+        assert_eq!(group1.len(), 3);
+        assert!(group1.contains(&file1));
+        assert!(group1.contains(&file2));
+        assert!(group1.contains(&file4));
+        let group2 = files_by_hash.get(CONTENT2_HASH).unwrap();
+        assert_eq!(group2.len(), 1);
+        assert!(group2.contains(&file3));
+
+        // Teardown
+        fs::remove_dir_all(dir).unwrap();
     }
 }
