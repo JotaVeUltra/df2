@@ -79,6 +79,20 @@ fn group_files_by_md5_hash(files: Vec<String>, files_by_hash: &mut HashMap<Strin
     }
 }
 
+fn list_files_in_directory(dir: &str) -> Vec<String> {
+    let mut files = Vec::new();
+    let read_dir = fs::read_dir(dir).unwrap();
+    for result_entry in read_dir {
+        let entry = result_entry.unwrap();
+        if !entry.path().is_dir() {
+            if let Some(path_str) = entry.path().to_str() {
+                files.push(path_str.to_string().replace('\\', "/"))
+            }
+        }
+    }
+    files
+}
+
 #[cfg(test)]
 mod tests {
     use std::{fs::File, str::from_utf8};
@@ -243,6 +257,29 @@ mod tests {
         let group2 = files_by_hash.get(CONTENT2_HASH).unwrap();
         assert_eq!(group2.len(), 1);
         assert!(group2.contains(&file3));
+
+        // Teardown
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn list_files_in_directory_returns_vector_with_file_names() {
+        // Setup
+        let dir = "test_dir";
+        let sub = format!("{}/sub", dir);
+        fs::create_dir_all(sub).unwrap();
+        let file1 = format!("{}/file1.txt", dir);
+        let file2 = format!("{}/file2.txt", dir);
+        fs::write(&file1, CONTENT1).unwrap();
+        fs::write(&file2, CONTENT2).unwrap();
+
+        // Test
+        let files: Vec<String> = list_files_in_directory(dir);
+
+        // Assertions
+        assert_eq!(files.len(), 2);
+        assert!(&files.contains(&file1));
+        assert!(&files.contains(&file2));
 
         // Teardown
         fs::remove_dir_all(dir).unwrap();
