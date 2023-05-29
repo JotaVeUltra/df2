@@ -48,10 +48,25 @@ fn handle<W: Write>(writer: &mut W, args: Vec<String>) {
         writer,
         vec![b"Computing duplicates in the following directories:\n"],
     );
+    let mut files_by_hash = HashMap::new();
     for dir in dirs.iter() {
         write_output(writer, vec![b"- ", dir.as_bytes(), b"\n"]);
+        group_files_by_md5_hash(list_files_in_directory(dir), &mut files_by_hash);
     }
-    write_output(writer, vec![b"\nNo duplicate files found\n"]);
+    files_by_hash.retain(|_, v| v.len() > 1);
+    if files_by_hash.is_empty() {
+        return write_output(writer, vec![b"\nNo duplicate files found\n"]);
+    }
+    write_output(writer, vec![b"\nDuplicates found:\n"]);
+    let mut sorted_keys: Vec<&String> = files_by_hash.keys().collect();
+    sorted_keys.sort();
+    for key in sorted_keys {
+        let aggregation = files_by_hash.get(key).unwrap();
+        write_output(writer, vec![b"\nHash: ", key.as_bytes(), b"\nFiles:\n"]);
+        for file in aggregation {
+            write_output(writer, vec![b"- ", file.as_bytes(), b"\n"]);
+        }
+    }
 }
 
 fn write_output<W: Write>(writer: &mut W, texts: Vec<&[u8]>) {
@@ -208,6 +223,45 @@ mod tests {
 
         // Teardown
         fs::remove_dir_all("empty_dir").unwrap();
+    }
+
+    #[test]
+    fn handle_writes_duplicate_files_grouped_by_hash() {
+        // Setup
+        let dir = "test_dir";
+        let sub = format!("{}/sub", dir);
+        fs::create_dir_all(&sub).unwrap();
+        let file1 = format!("{}/file1.txt", dir);
+        let file2 = format!("{}/file2.txt", dir);
+        let file3 = format!("{}/file3.txt", dir);
+        let file4 = format!("{}/file4.txt", sub);
+        fs::write(&file1, CONTENT1).unwrap();
+        fs::write(&file2, CONTENT1).unwrap();
+        fs::write(&file3, CONTENT2).unwrap();
+        fs::write(&file4, CONTENT2).unwrap();
+        let mut buf = Vec::new();
+        let args: Vec<String> = vec![String::from("bin"), String::from(dir)];
+
+        // Test
+        handle(&mut buf, args);
+        let out = from_utf8(&buf).unwrap();
+
+        // Assertions
+        let expected_output = format!(
+            "Computing duplicates in the following directories:\n- {}\n- {}\n\nDuplicates found:\n\nHash: {}\nFiles:\n- {}\n- {}\n\nHash: {}\nFiles:\n- {}\n- {}\n",
+            dir,
+            sub,
+            CONTENT1_HASH,
+            file1,
+            file2,
+            CONTENT2_HASH,
+            file3,
+            file4
+        );
+        assert_eq!(expected_output, out);
+
+        // Teardown
+        fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
