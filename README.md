@@ -17,6 +17,7 @@ Replace `<path>...` with one or more directory paths that you want to search for
 The program supports the following options:
 
 - `-h`, `--help`: Displays the usage information and options.
+- `-q`, `--quiet`: Runs the program in quiet mode, suppressing all output except for the final results.
 
 ## Prerequisites
 

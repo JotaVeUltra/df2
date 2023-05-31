@@ -6,7 +6,7 @@ use std::{env, fs, io};
 use walkdir::WalkDir;
 
 const USAGE_TEXT: &[u8] = b"Usage:\n    df2 <path>...\n";
-const OPTIONS_TEXT: &[u8] = b"\nOptions:\n    -h --help\n";
+const OPTIONS_TEXT: &[u8] = b"\nOptions:\n    -h --help\n    -q --quiet";
 
 fn main() {
     let stdout = io::stdout();
@@ -17,23 +17,30 @@ fn main() {
 
 fn handle<W: Write>(writer: &mut W, args: Vec<String>) {
     if args.len() < 2 {
-        return write_output(writer, vec![USAGE_TEXT]);
+        return write_output(writer, vec![USAGE_TEXT], false);
     }
     if args.contains(&String::from("-h")) || args.contains(&String::from("--help")) {
-        return write_output(writer, vec![USAGE_TEXT, OPTIONS_TEXT]);
+        return write_output(writer, vec![USAGE_TEXT, OPTIONS_TEXT], false);
     }
     let mut dirs: Vec<String> = Vec::new();
+    let mut quiet: bool = false;
     for arg in args.iter().skip(1) {
+        if arg.eq("-q") || arg.eq("--quiet") {
+            quiet = true;
+            continue;
+        }
         let path = Path::new(arg);
         if !path.exists() {
             return write_output(
                 writer,
                 vec![b"Error: Directory ", arg.as_bytes(), b" does not exist.\n"],
+                false,
             );
         } else if !path.is_dir() {
             return write_output(
                 writer,
                 vec![b"Error: ", arg.as_bytes(), b" is not a directory.\n"],
+                false,
             );
         }
         for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
@@ -47,31 +54,39 @@ fn handle<W: Write>(writer: &mut W, args: Vec<String>) {
     write_output(
         writer,
         vec![b"Computing duplicates in the following directories:\n"],
+        quiet,
     );
     let mut files_by_hash = HashMap::new();
     for dir in dirs.iter() {
-        write_output(writer, vec![b"- ", dir.as_bytes(), b"\n"]);
+        write_output(writer, vec![b"- ", dir.as_bytes(), b"\n"], quiet);
         group_files_by_md5_hash(list_files_in_directory(dir), &mut files_by_hash);
     }
+    write_output(writer, vec![b"\n"], quiet);
     files_by_hash.retain(|_, v| v.len() > 1);
     if files_by_hash.is_empty() {
-        return write_output(writer, vec![b"\nNo duplicate files found\n"]);
+        return write_output(writer, vec![b"No duplicate files found\n"], false);
     }
-    write_output(writer, vec![b"\nDuplicates found:\n"]);
+    write_output(writer, vec![b"Duplicates found:\n"], false);
     let mut sorted_keys: Vec<&String> = files_by_hash.keys().collect();
     sorted_keys.sort();
     for key in sorted_keys {
         let aggregation = files_by_hash.get(key).unwrap();
-        write_output(writer, vec![b"\nHash: ", key.as_bytes(), b"\nFiles:\n"]);
+        write_output(
+            writer,
+            vec![b"\nHash: ", key.as_bytes(), b"\nFiles:\n"],
+            false,
+        );
         for file in aggregation {
-            write_output(writer, vec![b"- ", file.as_bytes(), b"\n"]);
+            write_output(writer, vec![b"- ", file.as_bytes(), b"\n"], false);
         }
     }
 }
 
-fn write_output<W: Write>(writer: &mut W, texts: Vec<&[u8]>) {
-    for text in texts.iter() {
-        writer.write_all(text).unwrap();
+fn write_output<W: Write>(writer: &mut W, texts: Vec<&[u8]>, quiet: bool) {
+    if !quiet {
+        for text in texts.iter() {
+            writer.write_all(text).unwrap();
+        }
     }
 }
 
@@ -202,6 +217,30 @@ mod tests {
             "Computing duplicates in the following directories:\n- {}\n- {}",
             dir, sub
         )));
+
+        // Teardown
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn handle_does_not_write_directories_computed_with_quiet_mode() {
+        // Setup
+        let dir = "test_dir";
+        let sub = format!("{}/test_subdir", dir);
+        fs::create_dir_all(sub).unwrap();
+        let mut buf = Vec::new();
+        let args: Vec<String> = vec![
+            String::from("bin"),
+            String::from("--quiet"),
+            dir.to_string(),
+        ];
+
+        // Test
+        handle(&mut buf, args);
+        let out = from_utf8(&buf).unwrap();
+
+        // Assertions
+        assert_eq!("No duplicate files found\n", out);
 
         // Teardown
         fs::remove_dir_all(dir).unwrap();
