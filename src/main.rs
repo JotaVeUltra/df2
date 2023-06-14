@@ -6,8 +6,7 @@ use std::{env, fs, io};
 use walkdir::WalkDir;
 
 const USAGE_TEXT: &[u8] = b"Usage:\n    df2 <path>...\n";
-const OPTIONS_TEXT: &[u8] =
-    b"\nOptions:\n    -h --help\n    -q --quiet\n    -o --output <output.csv>";
+const OPTIONS_TEXT: &[u8] = b"\nOptions:\n    -h --help\n    -o --output=OUTPUT\n    -q --quiet";
 
 struct Args {
     none: bool,
@@ -385,6 +384,21 @@ mod tests {
             file4
         );
         assert_eq!(expected_output, out);
+
+        // Teardown
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn handle_writes_to_output_file() {
+        // Setup
+        let dir = "test_dir";
+        fs::create_dir_all(&dir).unwrap();
+        let mut buf = Vec::new();
+        let args: Vec<String> = vec![String::from("bin"), String::from(dir)];
+
+        // Test
+        handle(&mut buf, args);
 
         // Teardown
         fs::remove_dir_all(dir).unwrap();
