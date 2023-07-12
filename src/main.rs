@@ -8,6 +8,35 @@ use walkdir::WalkDir;
 const USAGE_TEXT: &[u8] = b"Usage:\n    df2 <path>...\n";
 const OPTIONS_TEXT: &[u8] = b"\nOptions:\n    -h --help\n    -q --quiet";
 
+struct Args {
+    none: bool,
+    paths: Vec<String>,
+    help: bool,
+    quiet: bool,
+}
+
+fn parse_args(args: &[String]) -> Args {
+    let none = args.is_empty();
+    let mut paths = Vec::new();
+    let mut help = false;
+    let mut quiet = false;
+
+    for arg in args {
+        match arg.as_str() {
+            "-h" | "--help" => help = true,
+            "-q" | "--quiet" => quiet = true,
+            path => paths.push(path.to_string()),
+        }
+    }
+
+    Args {
+        none,
+        paths,
+        help,
+        quiet,
+    }
+}
+
 fn main() {
     let stdout = io::stdout();
     let mut writer = stdout.lock();
@@ -16,20 +45,16 @@ fn main() {
 }
 
 fn handle<W: Write>(writer: &mut W, args: Vec<String>) {
-    if args.len() < 2 {
+    let parsed_args: Args = parse_args(&args[1..]);
+    if parsed_args.none {
         return write_output(writer, vec![USAGE_TEXT], false);
     }
-    if args.contains(&String::from("-h")) || args.contains(&String::from("--help")) {
+    if parsed_args.help {
         return write_output(writer, vec![USAGE_TEXT, OPTIONS_TEXT], false);
     }
     let mut dirs: Vec<String> = Vec::new();
-    let mut quiet: bool = false;
-    for arg in args.iter().skip(1) {
-        if arg.eq("-q") || arg.eq("--quiet") {
-            quiet = true;
-            continue;
-        }
-        let path = Path::new(arg);
+    for arg in parsed_args.paths {
+        let path = Path::new(&arg);
         if !path.exists() {
             return write_output(
                 writer,
@@ -54,14 +79,18 @@ fn handle<W: Write>(writer: &mut W, args: Vec<String>) {
     write_output(
         writer,
         vec![b"Computing duplicates in the following directories:\n"],
-        quiet,
+        parsed_args.quiet,
     );
     let mut files_by_hash = HashMap::new();
     for dir in dirs.iter() {
-        write_output(writer, vec![b"- ", dir.as_bytes(), b"\n"], quiet);
+        write_output(
+            writer,
+            vec![b"- ", dir.as_bytes(), b"\n"],
+            parsed_args.quiet,
+        );
         group_files_by_md5_hash(list_files_in_directory(dir), &mut files_by_hash);
     }
-    write_output(writer, vec![b"\n"], quiet);
+    write_output(writer, vec![b"\n"], parsed_args.quiet);
     files_by_hash.retain(|_, v| v.len() > 1);
     if files_by_hash.is_empty() {
         return write_output(writer, vec![b"No duplicate files found\n"], false);
