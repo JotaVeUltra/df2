@@ -231,7 +231,7 @@ mod tests {
     #[test]
     fn handle_writes_directories_computed() {
         // Setup
-        let dir = "test_dir";
+        let dir = "test_dir1";
         let sub = format!("{}/test_subdir", dir);
         fs::create_dir_all(&sub).unwrap();
         let mut buf = Vec::new();
@@ -254,7 +254,7 @@ mod tests {
     #[test]
     fn handle_does_not_write_directories_computed_with_quiet_mode() {
         // Setup
-        let dir = "test_dir";
+        let dir = "test_dir2";
         let sub = format!("{}/test_subdir", dir);
         fs::create_dir_all(sub).unwrap();
         let mut buf = Vec::new();
@@ -296,7 +296,7 @@ mod tests {
     #[test]
     fn handle_writes_duplicate_files_grouped_by_hash() {
         // Setup
-        let dir = "test_dir";
+        let dir = "test_dir3";
         let sub = format!("{}/sub", dir);
         fs::create_dir_all(&sub).unwrap();
         let file1 = format!("{}/file1.txt", dir);
@@ -351,7 +351,7 @@ mod tests {
     #[test]
     fn group_files_by_md5_hash_creates_correct_groups() {
         // Setup
-        let dir = "test_dir";
+        let dir = "test_dir4";
         fs::create_dir_all(dir).unwrap();
         let file1 = format!("{}/file1.txt", dir);
         let file2 = format!("{}/file2.txt", dir);
@@ -387,7 +387,7 @@ mod tests {
     #[test]
     fn list_files_in_directory_returns_vector_with_file_names() {
         // Setup
-        let dir = "test_dir";
+        let dir = "test_dir5";
         let sub = format!("{}/sub", dir);
         fs::create_dir_all(sub).unwrap();
         let file1 = format!("{}/file1.txt", dir);

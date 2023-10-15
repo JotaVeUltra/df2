@@ -61,5 +61,5 @@ Files:
 ## Running tests
 
 ```shell
-cargo test -- --test-threads=1
+cargo test
 ```
