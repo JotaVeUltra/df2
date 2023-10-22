@@ -41,19 +41,19 @@ fn main() {
     let stdout = io::stdout();
     let mut writer = stdout.lock();
     let args: Vec<String> = env::args().collect();
-    handle(&mut writer, args);
+    let parsed_args: Args = parse_args(&args[1..]);
+    handle(&mut writer, parsed_args);
 }
 
-fn handle<W: Write>(writer: &mut W, args: Vec<String>) {
-    let parsed_args: Args = parse_args(&args[1..]);
-    if parsed_args.none {
+fn handle<W: Write>(writer: &mut W, args: Args) {
+    if args.none {
         return write_output(writer, vec![USAGE_TEXT], false);
     }
-    if parsed_args.help {
+    if args.help {
         return write_output(writer, vec![USAGE_TEXT, OPTIONS_TEXT], false);
     }
     let mut dirs: Vec<String> = Vec::new();
-    for arg in parsed_args.paths {
+    for arg in args.paths {
         let path = Path::new(&arg);
         if !path.exists() {
             return write_output(
@@ -79,18 +79,14 @@ fn handle<W: Write>(writer: &mut W, args: Vec<String>) {
     write_output(
         writer,
         vec![b"Computing duplicates in the following directories:\n"],
-        parsed_args.quiet,
+        args.quiet,
     );
     let mut files_by_hash = HashMap::new();
     for dir in dirs.iter() {
-        write_output(
-            writer,
-            vec![b"- ", dir.as_bytes(), b"\n"],
-            parsed_args.quiet,
-        );
+        write_output(writer, vec![b"- ", dir.as_bytes(), b"\n"], args.quiet);
         group_files_by_md5_hash(list_files_in_directory(dir), &mut files_by_hash);
     }
-    write_output(writer, vec![b"\n"], parsed_args.quiet);
+    write_output(writer, vec![b"\n"], args.quiet);
     files_by_hash.retain(|_, v| v.len() > 1);
     if files_by_hash.is_empty() {
         return write_output(writer, vec![b"No duplicate files found\n"], false);
@@ -167,7 +163,12 @@ mod tests {
     fn handle_writes_usage_text_if_no_arguments_passed() {
         // Setup
         let mut buf = Vec::new();
-        let args: Vec<String> = vec![String::from("bin")];
+        let args = Args {
+            none: true,
+            help: false,
+            paths: vec![],
+            quiet: false,
+        };
 
         // Test
         handle(&mut buf, args);
@@ -181,7 +182,12 @@ mod tests {
     fn handle_writes_usage_and_options_text_if_help_option_passed() {
         // Setup
         let mut buf = Vec::new();
-        let args: Vec<String> = vec![String::from("bin"), String::from("--help")];
+        let args = Args {
+            none: false,
+            help: true,
+            paths: vec![],
+            quiet: false,
+        };
 
         // Test
         handle(&mut buf, args);
@@ -198,7 +204,12 @@ mod tests {
     fn handle_writes_error_message_if_directory_does_not_exist() {
         // Setup
         let mut buf = Vec::new();
-        let args: Vec<String> = vec![String::from("bin"), String::from("nonexistent_dir")];
+        let args = Args {
+            none: false,
+            help: false,
+            paths: vec![String::from("nonexistent_dir")],
+            quiet: false,
+        };
 
         // Test
         handle(&mut buf, args);
@@ -213,7 +224,12 @@ mod tests {
         // Setup
         let mut buf = Vec::new();
         let file_path = "file.txt";
-        let args: Vec<String> = vec![String::from("bin"), String::from(file_path)];
+        let args = Args {
+            none: false,
+            help: false,
+            paths: vec![String::from(file_path)],
+            quiet: false,
+        };
         File::create(file_path).unwrap();
 
         // Test
@@ -235,7 +251,12 @@ mod tests {
         let sub = format!("{}/test_subdir", dir);
         fs::create_dir_all(&sub).unwrap();
         let mut buf = Vec::new();
-        let args: Vec<String> = vec![String::from("bin"), dir.to_string()];
+        let args = Args {
+            none: false,
+            help: false,
+            paths: vec![dir.to_string()],
+            quiet: false,
+        };
 
         // Test
         handle(&mut buf, args);
@@ -258,11 +279,12 @@ mod tests {
         let sub = format!("{}/test_subdir", dir);
         fs::create_dir_all(sub).unwrap();
         let mut buf = Vec::new();
-        let args: Vec<String> = vec![
-            String::from("bin"),
-            String::from("--quiet"),
-            dir.to_string(),
-        ];
+        let args = Args {
+            none: false,
+            help: false,
+            paths: vec![dir.to_string()],
+            quiet: true,
+        };
 
         // Test
         handle(&mut buf, args);
@@ -280,7 +302,12 @@ mod tests {
         // Setup
         fs::create_dir_all("empty_dir").unwrap();
         let mut buf = Vec::new();
-        let args: Vec<String> = vec![String::from("bin"), String::from("empty_dir")];
+        let args = Args {
+            none: false,
+            help: false,
+            paths: vec![String::from("empty_dir")],
+            quiet: false,
+        };
 
         // Test
         handle(&mut buf, args);
@@ -308,7 +335,12 @@ mod tests {
         fs::write(&file3, CONTENT2).unwrap();
         fs::write(&file4, CONTENT2).unwrap();
         let mut buf = Vec::new();
-        let args: Vec<String> = vec![String::from("bin"), String::from(dir)];
+        let args = Args {
+            none: false,
+            help: false,
+            paths: vec![String::from(dir)],
+            quiet: false,
+        };
 
         // Test
         handle(&mut buf, args);
