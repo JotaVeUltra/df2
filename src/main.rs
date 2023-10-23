@@ -6,27 +6,44 @@ use std::{env, fs, io};
 use walkdir::WalkDir;
 
 const USAGE_TEXT: &[u8] = b"Usage:\n    df2 <path>...\n";
-const OPTIONS_TEXT: &[u8] = b"\nOptions:\n    -h --help\n    -q --quiet";
+const OPTIONS_TEXT: &[u8] =
+    b"\nOptions:\n    -h --help\n    -q --quiet\n    -o --output <output.csv>";
 
 struct Args {
     none: bool,
     paths: Vec<String>,
     help: bool,
     quiet: bool,
+    output_file: String,
 }
 
 fn parse_args(args: &[String]) -> Args {
-    let none = args.is_empty();
+    let mut none = true;
     let mut paths = Vec::new();
     let mut help = false;
     let mut quiet = false;
+    let mut output_file = String::new();
 
-    for arg in args {
-        match arg.as_str() {
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
             "-h" | "--help" => help = true,
             "-q" | "--quiet" => quiet = true,
-            path => paths.push(path.to_string()),
+            "-o" | "--output" => {
+                if i + 1 < args.len() {
+                    output_file = args[i + 1].clone();
+                    i += 1;
+                } else {
+                    eprintln!("Error: Missing output file name after -o/--output.");
+                    std::process::exit(1);
+                }
+            }
+            path => {
+                none = false;
+                paths.push(path.to_string());
+            }
         }
+        i += 1;
     }
 
     Args {
@@ -34,6 +51,7 @@ fn parse_args(args: &[String]) -> Args {
         paths,
         help,
         quiet,
+        output_file,
     }
 }
 
@@ -168,6 +186,7 @@ mod tests {
             help: false,
             paths: vec![],
             quiet: false,
+            output_file: "".to_string(),
         };
 
         // Test
@@ -187,6 +206,7 @@ mod tests {
             help: true,
             paths: vec![],
             quiet: false,
+            output_file: "".to_string(),
         };
 
         // Test
@@ -209,6 +229,7 @@ mod tests {
             help: false,
             paths: vec![String::from("nonexistent_dir")],
             quiet: false,
+            output_file: "".to_string(),
         };
 
         // Test
@@ -229,6 +250,7 @@ mod tests {
             help: false,
             paths: vec![String::from(file_path)],
             quiet: false,
+            output_file: "".to_string(),
         };
         File::create(file_path).unwrap();
 
@@ -256,6 +278,7 @@ mod tests {
             help: false,
             paths: vec![dir.to_string()],
             quiet: false,
+            output_file: "".to_string(),
         };
 
         // Test
@@ -284,6 +307,7 @@ mod tests {
             help: false,
             paths: vec![dir.to_string()],
             quiet: true,
+            output_file: "".to_string(),
         };
 
         // Test
@@ -307,6 +331,7 @@ mod tests {
             help: false,
             paths: vec![String::from("empty_dir")],
             quiet: false,
+            output_file: "".to_string(),
         };
 
         // Test
@@ -340,6 +365,7 @@ mod tests {
             help: false,
             paths: vec![String::from(dir)],
             quiet: false,
+            output_file: "".to_string(),
         };
 
         // Test
@@ -363,6 +389,38 @@ mod tests {
         // Teardown
         fs::remove_dir_all(dir).unwrap();
     }
+
+    // #[test]
+    // fn handle_writes_to_output_file() {
+    //     // Setup
+    //     let dir = "test_dir6";
+    //     fs::create_dir_all(dir).unwrap();
+    //     let file1 = format!("{}/file1.txt", dir);
+    //     let file2 = format!("{}/file2.txt", dir);
+    //     fs::write(file1, CONTENT1).unwrap();
+    //     fs::write(file2, CONTENT1).unwrap();
+    //     let mut buf = Vec::new();
+    //     let output_file = "output.csv";
+    //     let args: Vec<String> = vec![
+    //         String::from("bin"),
+    //         String::from(dir),
+    //         String::from("-o=output.csv"),
+    //     ];
+
+    //     // Test
+    //     handle(&mut buf, args);
+
+    //     // Assertions
+    //     assert!(fs::metadata(output_file).is_ok());
+    //     // let output_content = fs::read_to_string(output_file).unwrap();
+    //     // assert!(output_content.contains("Hash,File Path"));
+    //     // assert!(output_content.contains(CONTENT1_HASH));
+    //     // assert!(output_content.contains(CONTENT2_HASH));
+
+    //     // Teardown
+    //     fs::remove_dir_all(dir).unwrap();
+    //     fs::remove_file(output_file).unwrap();
+    // }
 
     #[test]
     fn md5_hash_calculates_correct_hash_for_file() {
