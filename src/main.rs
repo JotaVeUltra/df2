@@ -390,38 +390,6 @@ mod tests {
         fs::remove_dir_all(dir).unwrap();
     }
 
-    // #[test]
-    // fn handle_writes_to_output_file() {
-    //     // Setup
-    //     let dir = "test_dir6";
-    //     fs::create_dir_all(dir).unwrap();
-    //     let file1 = format!("{}/file1.txt", dir);
-    //     let file2 = format!("{}/file2.txt", dir);
-    //     fs::write(file1, CONTENT1).unwrap();
-    //     fs::write(file2, CONTENT1).unwrap();
-    //     let mut buf = Vec::new();
-    //     let output_file = "output.csv";
-    //     let args: Vec<String> = vec![
-    //         String::from("bin"),
-    //         String::from(dir),
-    //         String::from("-o=output.csv"),
-    //     ];
-
-    //     // Test
-    //     handle(&mut buf, args);
-
-    //     // Assertions
-    //     assert!(fs::metadata(output_file).is_ok());
-    //     // let output_content = fs::read_to_string(output_file).unwrap();
-    //     // assert!(output_content.contains("Hash,File Path"));
-    //     // assert!(output_content.contains(CONTENT1_HASH));
-    //     // assert!(output_content.contains(CONTENT2_HASH));
-
-    //     // Teardown
-    //     fs::remove_dir_all(dir).unwrap();
-    //     fs::remove_file(output_file).unwrap();
-    // }
-
     #[test]
     fn md5_hash_calculates_correct_hash_for_file() {
         // Setup
